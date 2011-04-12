@@ -27,6 +27,7 @@ Nethook requires the following Perl modules, which are available in the EPEL rep
 
 -  perl-App-Daemon
 -  perl-IO-Interface
+-  perl-Log-Log4perl
 -  perl-YAML
 
 ## Installation

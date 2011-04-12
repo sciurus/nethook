@@ -10,6 +10,7 @@ use strict;
 use warnings;
 
 use App::Daemon qw(daemonize);
+use Log::Log4perl qw(:easy);
 use IO::Interface::Simple;
 use YAML qw(DumpFile);
 
@@ -30,10 +31,12 @@ my $conf_dir  = '/etc/nethook';
 
 daemonize();
 
+my $logger = get_logger();
+
 start_daemon();
 
 sub start_daemon {
-    print "Started\n";
+    $logger->debug("Hello");
 
     unless ( -d $state_dir ) {
         mkdir $state_dir;
@@ -57,14 +60,14 @@ sub start_daemon {
 
     # no more work to do until signal received
     while (1) {
-        print "Zzz\n";
+        $logger->debug("Zzz");
         sleep(86400);
     }
 
 }
 
 sub wake_daemon {
-    print "Yawn\n";
+    $logger->debug("Yawn");
 
     my %previous_interfaces = YAML::LoadFile($state);
     my %current_interfaces  = status_by_interface();
@@ -93,7 +96,7 @@ sub wake_daemon {
 sub run_scripts {
     my $i     = shift;
     my $state = shift;
-    print "$i went $state\n";
+    $logger->info("$i went $state");
 
     my $ifcfg = "/etc/sysconfig/network-scripts/ifcfg-$i";
     if ( -r $ifcfg ) {
@@ -111,7 +114,12 @@ sub run_scripts {
         for my $s (@scripts) {
             if ( -f $s and -x $s ) {
                 my $return = system($s);
-                print "$s returned $return\n";
+                if ( $return == 0 ) {
+                    $logger->info("$s ran successfully");
+                }
+                else {
+                    $logger->info("$s exited with error $return");
+                }
             }
         }
         unset_environment(@variables_set);
@@ -122,7 +130,7 @@ sub run_scripts {
 
 # SIGKILL handler
 sub stop_daemon {
-    print "Bye!\n";
+    $logger->debug("Goodbye");
     system('/sbin/netreport -r');
     unlink($state);
     exit(0);
@@ -165,7 +173,9 @@ sub set_environment {
         chomp($value);
 
         if ( exists $ENV{$name} ) {
-            print "Not clobbering existing environment variable $name\n";
+            $logger->info(
+"Not clobbering existing environment variable $name when reading $source"
+            );
         }
         else {
             $ENV{$name} = $value;
