@@ -55,22 +55,22 @@ sub start_daemon {
     system('/sbin/netreport') == 0
       or die 'Unable to request notification of network interface changes';
 
+    # no more work to do until signal received
     while (1) {
         print "Zzz\n";
-        sleep(60);
+        sleep(86400);
     }
 
 }
 
 sub wake_daemon {
     print "Yawn\n";
+
     my %previous_interfaces = YAML::LoadFile($state);
     my %current_interfaces  = status_by_interface();
     YAML::DumpFile( $state, %current_interfaces )
       or die "Unable to save state\n";
 
-    my @gone_down = ();
-    my @gone_up   = ();
     for my $i ( keys %previous_interfaces ) {
         my $was_running = $previous_interfaces{$i};
         my $is_running  = $current_interfaces{$i};
@@ -79,29 +79,22 @@ sub wake_daemon {
         }
         else {
             if ($was_running) {
-                push( @gone_down, $i );
+                run_scripts( $i, 'down' );
             }
             else {
-                push( @gone_up, $i );
+                run_scripts( $i, 'up' );
             }
         }
     }
 
-    for my $i (@gone_down) {
-        run_scripts( $i, 'down' );
-    }
-    for my $i (@gone_up) {
-        run_scripts( $i, 'up' );
-    }
-
     return;
-
 }
 
 sub run_scripts {
     my $i     = shift;
     my $state = shift;
     print "$i went $state\n";
+
     my $ifcfg = "/etc/sysconfig/network-scripts/ifcfg-$i";
     if ( -r $ifcfg ) {
         my @variables_set = set_environment($ifcfg);
@@ -123,6 +116,7 @@ sub run_scripts {
         }
         unset_environment(@variables_set);
     }
+
     return;
 }
 
@@ -151,7 +145,9 @@ sub status_by_interface {
 sub set_environment {
     my $source = shift;
     my @names  = ();
+
     open my $fh, '<', $source or die "Unable to read interface configuration\n";
+
     while ( my $line = <$fh> ) {
 
         # skip comments
@@ -163,9 +159,11 @@ sub set_environment {
         unless ( $line =~ /=/ ) {
             next;
         }
+
         my ( $name, $value ) = split( /=/, $line );
         chomp($name);
         chomp($value);
+
         if ( exists $ENV{$name} ) {
             print "Not clobbering existing environment variable $name\n";
         }
@@ -174,7 +172,9 @@ sub set_environment {
             push( @names, $name );
         }
     }
+
     close $fh;
+
     return @names;
 }
 
@@ -183,5 +183,6 @@ sub unset_environment {
     for my $n (@names) {
         delete $ENV{$n};
     }
+
     return;
 }
