@@ -17,9 +17,9 @@ $App::Daemon::logfile = '/var/log/nethook.log';
 $App::Daemon::pidfile = '/var/run/nethook.pid';
 $App::Daemon::as_user = 'root';
 
-$SIG{'IO'}   = 'wakeup';
-$SIG{'TERM'} = 'shutdown';
-$SIG{'INT'}  = 'shutdown';
+$SIG{'IO'}   = 'wake_daemon';
+$SIG{'TERM'} = 'stop_daemon';
+$SIG{'INT'}  = 'stop_daemon';
 
 my $state_dir = '/var/lib/nethook';
 my $state     = "$state_dir/state.yml";
@@ -30,23 +30,20 @@ my $conf_dir  = '/etc/nethook';
 
 daemonize();
 
-startup();
+start_daemon();
 
-sub startup {
+sub start_daemon {
     print "Started\n";
 
     unless ( -d $state_dir ) {
         mkdir $state_dir;
     }
-
     unless ( -d $conf_dir ) {
         mkdir $conf_dir;
     }
-
     unless ( -d "$conf_dir/ifup.d" ) {
         mkdir "$conf_dir/ifup.d";
     }
-
     unless ( -d "$conf_dir/ifdown.d" ) {
         mkdir "$conf_dir/ifdown.d";
     }
@@ -65,7 +62,7 @@ sub startup {
 
 }
 
-sub wakeup {
+sub wake_daemon {
     print "Yawn\n";
     my %previous_interfaces = YAML::LoadFile($state);
     my %current_interfaces  = status_by_interface();
@@ -97,6 +94,8 @@ sub wakeup {
         run_scripts( $i, 'up' );
     }
 
+    return;
+
 }
 
 sub run_scripts {
@@ -109,6 +108,8 @@ sub run_scripts {
         opendir my $dh, "$conf_dir/if$state.d";
         my @scripts = ();
         while ( my $f = readdir $dh ) {
+
+            # skip hidden files
             next if $f =~ /^\./;
             push( @scripts, "$conf_dir/if$state.d/$f" );
         }
@@ -122,10 +123,11 @@ sub run_scripts {
         }
         unset_environment(@variables_set);
     }
+    return;
 }
 
 # SIGKILL handler
-sub shutdown {
+sub stop_daemon {
     print "Bye!\n";
     system('/sbin/netreport -r');
     unlink($state);
@@ -151,13 +153,17 @@ sub set_environment {
     my @names  = ();
     open my $fh, '<', $source or die "Unable to read interface configuration\n";
     while ( my $line = <$fh> ) {
+
+        # skip comments
         if ( $line =~ /^#/ ) {
             next;
         }
+
+        # skip lines that aren't variable assignment
         unless ( $line =~ /=/ ) {
             next;
         }
-        my ( $name, $value ) = split( '=', $line );
+        my ( $name, $value ) = split( /=/, $line );
         chomp($name);
         chomp($value);
         if ( exists $ENV{$name} ) {
@@ -177,4 +183,5 @@ sub unset_environment {
     for my $n (@names) {
         delete $ENV{$n};
     }
+    return;
 }
