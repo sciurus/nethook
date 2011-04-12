@@ -12,7 +12,6 @@ use warnings;
 use App::Daemon qw(daemonize);
 use IO::Interface::Simple;
 use YAML qw(DumpFile);
-use Data::Dumper;
 
 $App::Daemon::logfile = '/var/log/nethook.log';
 $App::Daemon::pidfile = '/var/run/nethook.pid';
@@ -22,9 +21,9 @@ $SIG{'IO'}   = 'wakeup';
 $SIG{'TERM'} = 'shutdown';
 $SIG{'INT'}  = 'shutdown';
 
-my $state_dir    = '/var/lib/nethook';
-my $state = "$state_dir/state.yml";
-my $conf_dir = '/etc/nethook';
+my $state_dir = '/var/lib/nethook';
+my $state     = "$state_dir/state.yml";
+my $conf_dir  = '/etc/nethook';
 
 # ifup.d/ and ifdown.d/ for scripts that run for every interface
 # ifup-$DEVICE and ifdown-$DEVICE for interface specific scripts
@@ -36,24 +35,25 @@ startup();
 sub startup {
     print "Started\n";
 
-    unless (-d $state_dir) {
+    unless ( -d $state_dir ) {
         mkdir $state_dir;
     }
 
-    unless (-d $conf_dir) {
+    unless ( -d $conf_dir ) {
         mkdir $conf_dir;
     }
 
-    unless (-d "$conf_dir/ifup.d") {
+    unless ( -d "$conf_dir/ifup.d" ) {
         mkdir "$conf_dir/ifup.d";
     }
 
-    unless (-d "$conf_dir/ifdown.d") {
+    unless ( -d "$conf_dir/ifdown.d" ) {
         mkdir "$conf_dir/ifdown.d";
     }
 
     my %current_interfaces = status_by_interface();
-    YAML::DumpFile( $state, %current_interfaces ) or die "Unable to save state\n";
+    YAML::DumpFile( $state, %current_interfaces )
+      or die "Unable to save state\n";
 
     system('/sbin/netreport') == 0
       or die 'Unable to request notification of network interface changes';
@@ -65,12 +65,12 @@ sub startup {
 
 }
 
-# SIGIO handler
 sub wakeup {
     print "Yawn\n";
     my %previous_interfaces = YAML::LoadFile($state);
-    my %current_interfaces = status_by_interface();
-    YAML::DumpFile( $state, %current_interfaces ) or die "Unable to save state\n";
+    my %current_interfaces  = status_by_interface();
+    YAML::DumpFile( $state, %current_interfaces )
+      or die "Unable to save state\n";
 
     my @gone_down = ();
     my @gone_up   = ();
@@ -91,36 +91,37 @@ sub wakeup {
     }
 
     for my $i (@gone_down) {
-        print "$i went down\n";
-	my $ifcfg = "/etc/sysconfig/network-scripts/ifcfg-$i";
-	if ( -r $ifcfg ) {
-            my @variables_set = set_environment($ifcfg);
-            opendir my $dh, "$conf_dir/ifdown.d";
-            my @scripts = ();
-            while ( my $f = readdir $dh ) {
-               next if $f =~ /^\./;
-               push(@scripts, "$conf_dir/ifdown.d/$f");
-            }
-            closedir $dh;
-            push(@scripts, "$conf_dir/ifdown-$i");
-            for my $s ( @scripts ) {
-                if ( -f $s and -x $s) {
-                    my $return = system($s);
-                    print "$s returned $return\n";
-                }
-            }
-            unset_environment(@variables_set);
-	}
+        run_scripts( $i, 'down' );
     }
     for my $i (@gone_up) {
-        print "$i went up\n";
+        run_scripts( $i, 'up' );
     }
 
-    # for each interface that went up
-    #     read values of /etc/sysconfig/network-scripts/ifcfg-$DEVICE into ENV
-    #     run any scripts in ifup.d
-    #     run ifup-$DEVICE ifit exists
-    # similar work for any interfaces that went down
+}
+
+sub run_scripts {
+    my $i     = shift;
+    my $state = shift;
+    print "$i went $state\n";
+    my $ifcfg = "/etc/sysconfig/network-scripts/ifcfg-$i";
+    if ( -r $ifcfg ) {
+        my @variables_set = set_environment($ifcfg);
+        opendir my $dh, "$conf_dir/if$state.d";
+        my @scripts = ();
+        while ( my $f = readdir $dh ) {
+            next if $f =~ /^\./;
+            push( @scripts, "$conf_dir/if$state.d/$f" );
+        }
+        closedir $dh;
+        push( @scripts, "$conf_dir/if$state-$i" );
+        for my $s (@scripts) {
+            if ( -f $s and -x $s ) {
+                my $return = system($s);
+                print "$s returned $return\n";
+            }
+        }
+        unset_environment(@variables_set);
+    }
 }
 
 # SIGKILL handler
@@ -147,22 +148,24 @@ sub status_by_interface {
 
 sub set_environment {
     my $source = shift;
-    my @names = ();
+    my @names  = ();
     open my $fh, '<', $source or die "Unable to read interface configuration\n";
-    while (my $line = <$fh>) {
-        if ($line =~ /^#/) {
+    while ( my $line = <$fh> ) {
+        if ( $line =~ /^#/ ) {
             next;
         }
-        unless ($line =~ /=/) {
+        unless ( $line =~ /=/ ) {
             next;
         }
-        my ($name, $value) = split('=', $line);
+        my ( $name, $value ) = split( '=', $line );
+        chomp($name);
+        chomp($value);
         if ( exists $ENV{$name} ) {
-           print "Not clobbering existing environment variable $name\n";
+            print "Not clobbering existing environment variable $name\n";
         }
         else {
             $ENV{$name} = $value;
-            push(@names, $name);
+            push( @names, $name );
         }
     }
     close $fh;
@@ -171,8 +174,7 @@ sub set_environment {
 
 sub unset_environment {
     my @names = @_;
-    for my $n ( @names ) {
-	print "Deleting $n\n";
+    for my $n (@names) {
         delete $ENV{$n};
     }
 }
