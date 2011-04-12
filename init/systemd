@@ -1,0 +1,13 @@
+# this is currently untested
+
+[Unit]
+Description=Rrun scripts when network interfaces change state
+Before=network.target
+
+[Service]
+ExecStart=/usr/sbin/nethook
+Type=forking
+PIDFile=/var/run/nethook.pid
+
+[Install]
+WantedBy=multi-user.target

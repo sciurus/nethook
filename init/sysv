@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Run-level Startup script for nethook
+#
+# chkconfig: 2345 9 91
+# description: Run scripts when network interfaces change state
+
+case "$1" in
+    start)
+        echo -n "Starting nethook: "
+        /usr/sbin/nethook
+        echo "OK"
+        ;;
+    stop)
+        echo -n "Stopping nethook: "
+        /usr/sbin/nethook stop
+        echo "OK"
+        ;;
+    status)
+        /usr/sbin/nethook status
+        ;;
+    restart)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: $0 start|stop|restart|status"
+        exit 1
+esac
+
+exit 0
