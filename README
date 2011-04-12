@@ -1,0 +1,37 @@
+## Summary
+
+Nethook is a daemon that runs scripts when network interfaces change state.
+
+## Usage
+
+When a network interface goes down, the following locations are checked for scripts. If they exist and are executable, they are run.
+
+/etc/nethook/ifup.d/*
+/etc/nethook/ifup-$DEVICE
+
+Similarly, when a network interface goes up, the following locations are checked for scripts to run.
+
+/etc/nethook/ifdown.d/*
+/etc/nethook/ifdown-$DEVICE
+
+Prior to running the scripts, nethook parses /etc/sysconfig/network-scripts/ifcfg-$DEVICE if it exists and makes the variables set in it available in the scripts' environment.
+
+## Requirements
+
+Nethook was tested on Red Hat Enterprise Linux 5, aka RHEL5, but it should work on any similar distributions which
+
+-  Place network interface configuration in /etc/sysconfig/network-scripts/ifcfg-*
+-  When NICs change state, signal processes that called netreport
+
+Nethook requires the following Perl modules, which are available in the EPEL repository.
+
+-  perl-App-Daemon
+-  perl-IO-Interface
+-  perl-YAML
+
+## Installation
+
+1.  Move nethook to /usr/sbin/nethook
+2.  Move init/sysv to /etc/init.d/nethook
+3.  Run `chkconfig nethook on`
+4.  Run `service nethook start`
