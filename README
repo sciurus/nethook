@@ -32,7 +32,8 @@ Nethook requires the following Perl modules, which are available in the EPEL rep
 
 ==Installation==
 
-  # Move nethook to /usr/sbin/nethook
-  # Move init/sysv to /etc/init.d/nethook
-  # Run `chkconfig nethook on`
-  # Run `service nethook start`
+  # `svn checkout http://nethook.googlecode.com/svn/trunk/ nethook-read-only`
+  # `mv nethook/nethook /usr/sbin/nethook`
+  # `mv init/sysv /etc/init.d/nethook`
+  # `chkconfig nethook on`
+  # `service nethook start`
