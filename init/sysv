@@ -17,7 +17,23 @@ case "$1" in
         echo "OK"
         ;;
     status)
-        /usr/sbin/nethook status
+        STATUS=$(/usr/sbin/nethook status)
+        if echo $STATUS | grep -q 'Running: yes'
+        then
+            echo "nethook is running"
+            exit 0
+        elif echo $STATUS | grep -q 'Running: no'
+        then
+            echo "nethook is dead and /var/run pid file exists"
+            exit 1
+        elif echo $STATUS | grep -q 'No pidfile found'
+        then
+            echo "nethook is not running"
+            exit 3
+        else
+            echo "nethook status is unknown"
+            exit 4
+        fi
         ;;
     restart)
         $0 stop
