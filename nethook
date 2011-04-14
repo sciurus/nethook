@@ -1,11 +1,5 @@
 #! /usr/bin/env perl
 
-# http://search.cpan.org/~mschilli/App-Daemon-0.11/Daemon.pm
-# http://search.cpan.org/~lds/IO-Interface-1.05/Interface.pm
-
-# would be nice to support debian variables as well
-# http://www.debian.org/doc/manuals/debian-reference/ch05.en.html#_scripting_with_the_ifupdown_system
-
 use strict;
 use warnings;
 
@@ -25,9 +19,6 @@ $SIG{'INT'}  = 'stop_daemon';
 my $state_dir = '/var/lib/nethook';
 my $state     = "$state_dir/state.yml";
 my $conf_dir  = '/etc/nethook';
-
-# ifup.d/ and ifdown.d/ for scripts that run for every interface
-# ifup-$DEVICE and ifdown-$DEVICE for interface specific scripts
 
 daemonize();
 
@@ -93,6 +84,8 @@ sub wake_daemon {
     return;
 }
 
+# ifup.d/ and ifdown.d/ for scripts that run for every interface
+# ifup-$DEVICE and ifdown-$DEVICE for interface specific scripts
 sub run_scripts {
     my $i     = shift;
     my $state = shift;
@@ -128,7 +121,6 @@ sub run_scripts {
     return;
 }
 
-# SIGKILL handler
 sub stop_daemon {
     $logger->debug("Goodbye");
     system('/sbin/netreport -r');
@@ -151,6 +143,8 @@ sub status_by_interface {
     return %results;
 }
 
+# would be nice to support debian variables as well
+# http://www.debian.org/doc/manuals/debian-reference/ch05.en.html#_scripting_with_the_ifupdown_system
 sub set_environment {
     my $source = shift;
     my @names  = ();
