@@ -133,6 +133,7 @@ sub stop_daemon {
     $logger->debug("Goodbye");
     system('/sbin/netreport -r');
     unlink($state);
+    unlink($App::Daemon::pidfile);
     exit(0);
 }
 
