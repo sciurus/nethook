@@ -35,3 +35,5 @@ Nethook requires the following Perl modules, which are available in the EPEL rep
     $ mv init/sysv /etc/init.d/nethook
     $ chkconfig nethook on
     $ service nethook start
+
+As of version 0.13, App::Daemon's status command returns LSB-compliant exit codes. If you're using this version, the third step could be replaced by `ln -s /usr/sbin/nethook /etc/init.d/nethook`.
