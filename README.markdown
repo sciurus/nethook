@@ -1,5 +1,5 @@
 ## Summary
-Nethook is a daemon that runs scripts when network interfaces change state.
+Nethook is a daemon that runs scripts when network interfaces change state. I wrote nethook before I was aware of [ifup-local and ifdown-local](http://blog.dastrup.com/?p=52). You can probably use them instead.
 
 ## Usage
 When a network interface goes down, the following locations are checked for scripts. If they exist and are executable, they are run.
